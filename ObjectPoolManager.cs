@@ -101,7 +101,6 @@ public class ObjectPoolManager : MonoBehaviour
     public GameObject Get(GameObject pool)
     {
         // 새로 만들지 아니면 기존에 있던것을 재활용할지
-        //int count = PoolCount[pool.name];
         GameObject parent = PoolParent[pool.name];
 
         GameObject obj = null;
@@ -110,7 +109,7 @@ public class ObjectPoolManager : MonoBehaviour
         for (int i = 0; i < parent.transform.childCount; i++)
         {
             GameObject item = parent.transform.GetChild(i).gameObject;
-            if (item.gameObject.activeSelf == false) // 생성 말고 재활용 가능하면
+            if (item.gameObject.activeSelf == false)
             {
                 IsCreate = false;
                 obj = item.gameObject;
