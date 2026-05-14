@@ -167,6 +167,12 @@ public class ObjectPoolManager : MonoBehaviour
 
     public void Release(GameObject pool)
     {
+        if (pool.transform.parent == null)
+        {
+            DeSpawnObjectPool(pool);
+            return;
+        }
+        
         string obj = PoolDict?[pool.transform.parent.name]?.name;
         int defaultcount = PoolCount[obj];
         int childcount = PoolParent[obj].transform.childCount;
