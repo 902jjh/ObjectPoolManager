@@ -10,11 +10,19 @@ public class ObjectPoolManager : MonoBehaviour
     private Dictionary<string, GameObject> PoolParent = new Dictionary<string, GameObject>();
     private Dictionary<string, int> PoolCount = new Dictionary<string, int>();
 
+    public enum ParentType
+    {
+        Normal,
+        UI,
+    }
+
     [System.Serializable]
     public class ObjectPool
     {
         [Header("Parent Name")]
         public string Name;
+
+        public ParentType ParentType;
 
         [System.Serializable]
         public class Data
@@ -43,13 +51,14 @@ public class ObjectPoolManager : MonoBehaviour
         for (int i = 0; i < objectpool.Length; i++)
         {
             ObjectPool pools = objectpool[i];
+
             for (int ii = 0; ii < pools.data.Length; ii++)
             {
                 GameObject parent = new GameObject(pools.data[ii].obj.name);
                 GameObject child = pools.data[ii].obj;
 
                 parent.transform.parent = this.transform;
-                
+
                 PoolDict.Add(parent.name, pools.data[ii].obj);
                 PoolParent.Add(parent.name, parent);
                 PoolCount.Add(parent.name, pools.data[ii].count);
@@ -63,6 +72,16 @@ public class ObjectPoolManager : MonoBehaviour
                     //UnUseObjectPool(pool);
                     // 위에껀 혹시 모르니까 남겨둠 나중에 Bullet한테 맞춰줬던게 문제될 수 있으니까
                     // Bullet의 OnDeSpawn GameObject effect관련
+                }
+
+                if(pools.ParentType == ParentType.Normal) continue;
+
+                switch(pools.ParentType)
+                {
+                    case ParentType.UI:
+                        var canvas = parent.AddComponent<Canvas>();
+                        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                        break;
                 }
             }
         }
@@ -88,8 +107,8 @@ public class ObjectPoolManager : MonoBehaviour
 
     private void UseObjectPool(GameObject pool)
     {
-        pool.SetActive(true);
-        pool.GetComponent<IPoolable>()?.OnSpawn();
+        pool?.SetActive(true);
+        pool?.GetComponent<IPoolable>()?.OnSpawn();
     }
 
     private void UnUseObjectPool(GameObject pool)
@@ -101,6 +120,7 @@ public class ObjectPoolManager : MonoBehaviour
     public GameObject Get(GameObject pool)
     {
         // 새로 만들지 아니면 기존에 있던것을 재활용할지
+        //int count = PoolCount[pool.name];
         GameObject parent = PoolParent[pool.name];
 
         GameObject obj = null;
@@ -109,7 +129,7 @@ public class ObjectPoolManager : MonoBehaviour
         for (int i = 0; i < parent.transform.childCount; i++)
         {
             GameObject item = parent.transform.GetChild(i).gameObject;
-            if (item.gameObject.activeSelf == false)
+            if (item.gameObject.activeSelf == false) // 생성 말고 재활용 가능하면
             {
                 IsCreate = false;
                 obj = item.gameObject;
@@ -124,7 +144,6 @@ public class ObjectPoolManager : MonoBehaviour
         }
         else
             UseObjectPool(obj);
-
         return obj;
 
     }
@@ -172,7 +191,7 @@ public class ObjectPoolManager : MonoBehaviour
             DeSpawnObjectPool(pool);
             return;
         }
-        
+
         string obj = PoolDict?[pool.transform.parent.name]?.name;
         int defaultcount = PoolCount[obj];
         int childcount = PoolParent[obj].transform.childCount;
@@ -181,5 +200,17 @@ public class ObjectPoolManager : MonoBehaviour
             UnUseObjectPool(pool);
         else
             DeSpawnObjectPool(pool);
+    }
+
+    public void Release(string pool)
+    {
+        string obj = PoolDict?[pool]?.name;
+        int defaultcount = PoolCount[obj];
+        int childcount = PoolParent[obj].transform.childCount;
+
+        if (defaultcount >= childcount)
+            UnUseObjectPool(PoolDict[pool]);
+        else
+            DeSpawnObjectPool(PoolDict[pool]);
     }
 }
